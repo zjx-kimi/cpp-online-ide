@@ -3,81 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon"> 
-    <title>自动保存笔记应用</title>
+    <title>C++ Program Input and Output</title>
     <style>
-        body, html {
-            height: 100%; /* 让body和html元素的高度都占据整个视口的高度 */
-            margin: 0; /* 去除默认的margin */
-            padding: 0; /* 去除默认的padding */
-            margin: 1vh;
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
         }
-        #note {
-            width: 98vw; /* 将宽度设置为100vw，占据整个视口的宽度 */
-            height: 98vh; /* 将高度设置为100vh，占据整个视口的高度 */
-            box-sizing: border-box; /* 让内边距和边框包含在元素的宽度和高度内 */
-            padding: 10px; /* 设置内边距 */
-            border: 1px solid #ccc; /* 设置边框 */
-            font-size: 15px; /* 设置字体大小 */
-            line-height: 1.5; /* 设置行高 */
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            font-weight: bold;
+        }
+        textarea, .output {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif; /* 设置字体 */
+            font-size: 14px; /* 设置字体大小 */
+        }
+        input[type="button"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        input[type="button"]:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: #ff0000; /* 红色字体表示错误 */
         }
     </style>
+    <script>
+        function runProgram() {
+            var form = document.getElementById("program-form");
+            var formData = new FormData(form);
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/run", true);
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response.status === "error") {
+                        document.getElementById("output").value = "Compilation Error:\n" + response.error;
+                    } else {
+                        document.getElementById("output").value = response.output;
+                    }
+                }
+            };
+            xhr.send(formData);
+        }
+    </script>
 </head>
 <body>
-    <textarea id="note"></textarea>
-    <script>
-        // 用于保存前一个笔记内容的变量
-        var previousNote = '';
-
-        // 自动保存笔记内容
-        var saveNote = function() {
-            var note = document.getElementById('note').value.trim(); // 去除首尾空白字符
-
-            // 如果笔记内容为空，则发送字符 '\0'，否则发送实际的笔记内容
-            var bodyContent = note === '' ? '\0' : note;
-
-            // 检查笔记内容是否发生变化
-            if (note !== previousNote) {
-                fetch('/notes', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ note: bodyContent })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log(data.message);
-                })
-                .catch(error => {
-                    console.error('保存笔记出错:', error);
-                });
-
-                // 更新前一个笔记内容
-                previousNote = note;
-            }
-        };
-
-        // 页面加载时自动获取已保存的笔记内容
-        window.onload = function() {
-            fetchNote();
-        };
-
-        // 自动获取已保存的笔记内容
-        var fetchNote = function() {
-            fetch('/notes')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('note').value = data.note;
-                // 更新前一个笔记内容
-                previousNote = data.note;
-            })
-            .catch(error => {
-                console.error('获取笔记出错:', error);
-            });
-        };
-
-        setInterval(saveNote, 2); // 每0.2秒保存一次
-    </script>
+    <div class="container">
+        <h1>C++ Program Input and Output</h1>
+        <form id="program-form">
+            <label for="code">Enter C++ code:</label>
+            <textarea name="code" class="code-input" rows="10">#include &lt;bits/stdc++.h&gt;
+using namespace std;
+int main() {
+    int n;
+    cin &gt;&gt; n;
+    cout &lt;&lt; n;
+    return 0;
+}</textarea>
+            <label for="input_data">Enter input data:</label>
+            <textarea name="input_data" rows="5"></textarea>
+        </form>
+        <textarea class="output" id="output" rows="5"></textarea>
+        <input type="button" value="Run Program" onclick="runProgram()">
+    </div>
 </body>
 </html>
