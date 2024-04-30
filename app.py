@@ -1,43 +1,44 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
-import os
+from flask import Flask, render_template, request, jsonify
+import subprocess
 
 app = Flask(__name__)
 
-# 用于保存笔记文件的目录
-NOTES_FOLDER = 'notes'
-app.config['NOTES_FOLDER'] = NOTES_FOLDER
-
 @app.route('/')
 def index():
-    return render_template('index.html')
-@app.route('/notes', methods=['GET', 'POST'])  # 添加了对 POST 请求的支持
-def save_or_get_note():
-    if request.method == 'POST':
-        note = request.json.get('note')
+    return render_template('index.html', output=None)
 
-        # 检查笔记是否为空
-        if not note:
-            return jsonify({'error': '笔记内容为空'})
-
-        # 创建一个名为 note.txt 的文件，并保存笔记内容
-        note_file_path = os.path.join(app.config['NOTES_FOLDER'], 'note.txt')
-        with open(note_file_path, 'w') as f:
-            f.write(note)
-
-        # 返回已保存的消息
-        return jsonify({'message': '笔记已保存'})
-    else:
-        # 获取笔记内容
-        note_file_path = os.path.join(app.config['NOTES_FOLDER'], 'note.txt')
-        if not os.path.exists(note_file_path):
-            return jsonify({'error': '笔记不存在'})
-
-        with open(note_file_path, 'r') as f:
-            note = f.read()
-
-        # 返回笔记内容
-        return jsonify({'note': note})
+@app.route('/run', methods=['POST'])
+def run_program():
+    code = request.form['code']
+    input_data = request.form['input_data']
+    
+    # 将代码保存到文件中
+    with open('temp/temp.cpp', 'w') as f:
+        f.write(code)
+    
+    # 将输入数据保存到文件中
+    with open('temp/input.txt', 'w') as f:
+        f.write(input_data)
+    
+    # 使用 subprocess 执行 g++ 编译代码
+    compile_process = subprocess.Popen(['g++', 'temp/temp.cpp', '-o', 'temp/temp'], stderr=subprocess.PIPE)
+    compile_output, compile_error = compile_process.communicate()
+    
+    # 如果编译错误，则返回编译错误信息
+    if compile_error:
+        return jsonify({'status': 'error', 'error': compile_error.decode('utf-8')})
+    
+    # 执行编译后的可执行文件，并将输入数据从 input.txt 重定向到标准输入，将输出结果重定向到 output.txt
+    with open('temp/input.txt', 'r') as input_file:
+        with open('temp/output.txt', 'w') as output_file:
+            run_process = subprocess.Popen(['./temp/temp'], stdin=input_file, stdout=output_file)
+            run_process.communicate()
+    
+    # 读取程序输出结果文件内容
+    with open('temp/output.txt', 'r') as f:
+        output = f.read()
+    
+    return jsonify({'status': 'success', 'output': output})
 
 if __name__ == '__main__':
     app.run(debug=True)
-
